@@ -1,0 +1,731 @@
+---
+title: "AI Market Growth & Software Job Postings Analysis"
+author: "Lauren Hughes, Jonah Calague, Oliver Boctor"
+date: "`r Sys.Date()`"
+format:
+  dashboard:
+    theme: flatly
+    embed-resources: true
+    nav-buttons:
+      - icon: github
+        href: "#"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, fig.width = 10, fig.height = 6)
+library(tidyverse)
+library(lubridate)
+library(scales)
+library(knitr)
+library(plotly)
+```
+
+# Overview {data-icon="fa-home"}
+
+## Row {height=30%}
+
+### Welcome Card
+
+![](https://i.ytimg.com/vi/vol1qJB2waE/hq720.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLDJY6K8qe85XGHAY6FCjgg8Jlko9g)
+
+## Row {height=70%}
+
+### Project Overview
+
+This project explores the relationship between the growth of AI as an economic sector and the changes in the software development labor market. As AI technologies such as LLMs, generative tools, etc. have become mainstream, many have been debating thw question: is AI creating new software jobs, displacing them, or simply reshaping what they require?
+
+Few technological transitions in recent memory have generated as much public debate. Since ChatGPT's launch in November 2022, many workers, especially those in tech, have found themselves replaced or cautious about their career outlooks. On the other side, many have profited greatly off of the AI boom, or at least find it helps streamline their workflow. So the question is, what is AI actually doing to the labor market for software developers? AI coding assistants can generate, debug, and document code with increasing ease, but whether this makes developers more productive or redundant is an empirical question our data can begin to answer.
+
+**Focus Question 1: How has AI market revenue growth affected the volume of software development job postings between 2020 and 2025?**
+
+**Focus Question 2: Is the share of software job postings that mention AI skills growing proportionally with AI market expansion?**
+
+**Focus Question 3: Did the post-ChatGPT period (2022–2023) produce a measurable disruption in software development hiring patterns?**
+
+To answer these questions, we analyzed the following datasets: Statista's AI & software market revenue/user data, and Indeed Hiring Lab's job posting indices. Together, they allow us to compare macroeconomic AI growth against employer behavior.
+
+Understanding this relationship matters for students, policymakers, and educators who are trying to anticipate how AI integration into the workforce will affect career pathways.
+
+### Ethical Considerations & Related Work
+
+**Ethical Questions and Limitations**
+
+There are several limitations that apply to this analysis:
+
+The Indeed platform skews toward certain industries and company sizes, underrepresenting companies that recruit through LinkedIn, internal portals, or other specialized platforms. We narrowed our focus to "Software Development," which excludes adjacent AI-heavy roles like ML engineering and AI research, potentially underestimating AI's total labor market impact.
+
+The Statista data from 2025 onward represents projected figures rather than observed ones, and should be interpreted with appropriate caution.
+
+Our dataset cannot speak to who is benefiting from AI economic growth, as we have no demographic data to assess whether this transition is equitable or concentrated among already-privileged groups. Prior research suggests junior and early-career workers bear a disproportionate share of disruption, which does not show up in our aggregate posting counts.
+
+**Related Work**
+
+Westby & Modestino (2025) provide an analysis similar to our work. Analyzing over 575,000 job vacancy records, they find that employer demand for inexperienced software developers dropped sharply in November 2022, coinciding with ChatGPT's release, with junior-level postings declining far more steeply than senior ones. By 2024, software engineer postings had fallen to roughly half their 2019 baseline. This aligns closely with our own finding that the software job posting index collapsed in 2023–2024 even as AI market revenue soared.
+
+The U.S. Bureau of Labor Statistics (2025) offers a counterpoint: their 2023–2033 occupational projections forecast software developer employment growing 17.9% over the decade, far above the 4% average across all occupations. Their analysis argues that AI integration will simultaneously generate new demand, as companies will require more developers to build and maintain AI systems. Considering both our work and these sources, it is certain that AI's impact is real and quite concentrated among junior roles, but may play out over a longer scope than our 2020–2024 window.
+
+---
+
+# Data Context {data-icon="fa-database"}
+
+## Row {height=50%}
+
+### Dataset 1: Statista AI & Software Market Data
+
+**Source:** [Statista](https://www.statista.com/) — a leading global provider of market and consumer statistics, drawing from over 22,500 sources including Gartner, IDC, and industry financial reports.
+
+**What Was Measured:** This dataset captures three annual metrics at the global level: total AI market revenue (in billions USD), the number of people and organizations actively using AI tools (in millions), and the total size of the broader software industry (in billions USD). Each of these was recorded annually from 2020 through 2030, with figures from 2020–2024 representing historical observations and 2025–2030 representing forward-looking projections from major market research firms.
+
+**Sample Description:** The data is aggregated at the global level with no individual-level observations — each row represents a single year. Because Statista compiles its figures from published financial reports, industry surveys, and enterprise licensing data, the historical values are broadly verifiable. However, the projection years depend on growth models whose assumptions are not fully disclosed, which introduces meaningful uncertainty. For our purposes, this sample allows us to track AI's financial footprint over time and situate it within the larger software economy, though it cannot tell us about regional variation or which types of AI products are driving growth.
+
+**Benefit / Shortcoming:** The primary benefit is the breadth of sources Statista synthesizes, giving a more comprehensive picture than any single report. The main shortcoming is limited methodological transparency, especially for projections, which may reflect optimistic industry assumptions.
+
+### Dataset 2: Indeed Hiring Lab Job Postings
+
+**Source:** [Indeed Hiring Lab](https://www.hiringlab.org/) — the economic research arm of Indeed, one of the world's largest job platforms, with over 250 million monthly unique visitors.
+
+**What Was Measured:** Two files were used. The first tracks a daily index of software development job postings in the United States, baselined to February 1, 2020 = 100 and seasonally adjusted. The second tracks the daily percentage of all U.S. job postings that mention "AI" or related terms in the title or description. Both series span approximately 2019–2024 with daily granularity, yielding over 2,000 observations per file.
+
+**Sample Description:** The data captures actual employer-posted job listings, meaning it reflects genuine hiring demand rather than survey-based estimates. Recordings were made daily by Indeed's platform systems, which index postings automatically. Geographic scope is limited to the United States for this analysis. The software sector index is computed for the "Software Development" sector specifically, using Indeed's internal sector classification system.
+
+**Benefit / Shortcoming:** The primary benefit is the daily resolution and large sample size, which allows detection of short-term labor market shifts (e.g., post-ChatGPT disruptions). The key shortcoming is platform bias — Indeed does not capture all job postings, and skews toward companies that actively advertise publicly, potentially underrepresenting enterprise and internal hiring.
+
+## Row {height=50%}
+
+### Data Join Strategy
+
+**How the Datasets Are Combined**
+
+The primary join key is **Year**. Statista data is already annual; Indeed's daily data is aggregated to annual averages using `group_by(Year)` and `summarize()`. A **left join** on Year preserves all Statista rows (including projected years 2025–2030), with `NA` values appearing for Indeed columns in future years where no data yet exists.
+
+Before joining, the Statista datasets required a `pivot_longer()` transformation from wide format (years as columns) to long format (one row per year). Date strings in the Indeed data were converted to proper `Date` objects using `as.Date()`, and the year was extracted with `lubridate::year()`.
+
+**Potential Challenges:** The geographic mismatch (U.S. labor data vs. global market data) is the most significant limitation of the merged dataset. Additionally, the COVID-era baseline (Feb 2020) for the software index amplifies the appearance of recovery in 2021–2022.
+
+### Codebook
+
+| Variable | Description | Unit | Source |
+|---|---|---|---|
+| `Year` | Calendar year | Numeric (2020–2030) | Both |
+| `AI_Market_Billions` | Total AI market revenue | Billions USD | Statista |
+| `AI_Users_Millions` | Number of AI tool users | Millions | Statista |
+| `Software_Total_Billions` | Total software industry revenue | Billions USD | Statista |
+| `avg_software_index` | Avg software job posting index | Index (Feb 2020 = 100) | Indeed |
+| `avg_ai_share` | Avg % of jobs mentioning AI | Percentage (0–100) | Indeed |
+| `avg_ai_index` | AI share normalized to base 100 | Index (Jan 2019 = 100) | Indeed (calc.) |
+| `observations` | Daily data points per year | Count | Indeed (calc.) |
+
+---
+
+# Question 1 {data-icon="fa-chart-line"}
+
+## Row {height=15%}
+
+### Research Question
+
+**How has AI market revenue growth affected the volume of software development job postings between 2020 and 2025?**
+
+As the global AI market expanded from approximately \$16.87 billion in 2020 toward a projected \$46.99 billion in 2025, we examine whether this economic growth corresponds to *increased* hiring demand for software developers, or whether AI's productivity gains are allowing companies to accomplish more with fewer hires. We compare `AI_Market_Billions` against `avg_software_index` year-over-year.
+
+## Row {height=55%}
+
+### Visualization
+
+```{r q1-data-load, include=FALSE}
+# Load data
+ai_market <- read_csv("~/Downloads/Statista_AIMarketGrowth - Sheet1.csv")
+ai_users <- read_csv("~/Downloads/Statista_AIToolsUsers - Sheet1.csv")
+software_market <- read_csv("~/Downloads/Statista_SoftwareMarketSize - Sheet1-2.csv")
+software_data <- read_csv("~/Downloads/job-postings-sector-index-2.csv")
+ai_data <- read_csv("~/Downloads/ai-headline-share.csv")
+
+# Transform Statista
+ai_market_long <- ai_market %>%
+  rename(Category = Year) %>%
+  pivot_longer(cols = -Category, names_to = "Year", values_to = "AI_Market_Billions") %>%
+  mutate(Year = as.numeric(Year)) %>%
+  select(Year, AI_Market_Billions)
+
+ai_users_long <- ai_users %>%
+  rename(Category = Year) %>%
+  pivot_longer(cols = -Category, names_to = "Year", values_to = "AI_Users_Millions") %>%
+  mutate(Year = as.numeric(Year)) %>%
+  select(Year, AI_Users_Millions)
+
+software_total <- software_market %>%
+  filter(Year == "Total (billions USD)") %>%
+  rename(Category = Year) %>%
+  pivot_longer(cols = -Category, names_to = "Year", values_to = "Software_Total_Billions") %>%
+  mutate(Year = as.numeric(Year)) %>%
+  select(Year, Software_Total_Billions)
+
+statista_combined <- ai_market_long %>%
+  inner_join(ai_users_long, by = "Year") %>%
+  inner_join(software_total, by = "Year") %>%
+  arrange(Year)
+
+# Transform Indeed
+software_clean <- software_data %>%
+  filter(countryName == "United States", sectorName == "Software Development") %>%
+  mutate(date = as.Date(dateString)) %>%
+  select(date, software_index = value)
+
+ai_clean <- ai_data %>%
+  filter(countryName == "United States") %>%
+  mutate(date = as.Date(dateString)) %>%
+  select(date, ai_share = value)
+
+indeed_combined <- inner_join(ai_clean, software_clean, by = "date") %>%
+  arrange(date) %>%
+  mutate(ai_index = (ai_share / first(ai_share)) * 100)
+
+indeed_annual <- indeed_combined %>%
+  mutate(Year = year(date)) %>%
+  group_by(Year) %>%
+  summarize(
+    avg_software_index = mean(software_index, na.rm = TRUE),
+    avg_ai_share = mean(ai_share, na.rm = TRUE),
+    avg_ai_index = mean(ai_index, na.rm = TRUE),
+    observations = n(),
+    .groups = "drop"
+  )
+
+final_combined <- statista_combined %>%
+  left_join(indeed_annual, by = "Year") %>%
+  arrange(Year)
+
+# Growth indices
+growth_indexed <- final_combined %>%
+  mutate(
+    AI_Market_Index = (AI_Market_Billions / first(AI_Market_Billions)) * 100,
+    AI_Users_Index = (AI_Users_Millions / first(AI_Users_Millions)) * 100,
+    Software_Market_Index = (Software_Total_Billions / first(Software_Total_Billions)) * 100,
+    Software_Jobs_Index = (avg_software_index / first(avg_software_index[!is.na(avg_software_index)])) * 100,
+    AI_JobShare_Index = (avg_ai_share / first(avg_ai_share[!is.na(avg_ai_share)])) * 100
+  )
+
+# Growth phases
+growth_phases <- growth_indexed %>%
+  mutate(
+    Growth_Phase = case_when(
+      Year <= 2021 ~ "Early Stage (2020-2021)",
+      Year >= 2022 & Year <= 2024 ~ "Rapid Expansion (2022-2024)",
+      Year >= 2025 ~ "Projected Maturity (2025+)",
+      TRUE ~ "Other"
+    ),
+    Growth_Phase = factor(Growth_Phase,
+                          levels = c("Early Stage (2020-2021)",
+                                     "Rapid Expansion (2022-2024)",
+                                     "Projected Maturity (2025+)"))
+  )
+
+# YoY growth
+yoy_growth <- growth_phases %>%
+  arrange(Year) %>%
+  mutate(
+    AI_Market_YoY = (AI_Market_Billions / lag(AI_Market_Billions) - 1) * 100,
+    AI_Users_YoY = (AI_Users_Millions / lag(AI_Users_Millions) - 1) * 100,
+    Software_Market_YoY = (Software_Total_Billions / lag(Software_Total_Billions) - 1) * 100,
+    Software_Jobs_YoY = (avg_software_index / lag(avg_software_index) - 1) * 100,
+    AI_Share_YoY = (avg_ai_share / lag(avg_ai_share) - 1) * 100
+  )
+```
+
+```{r q1-viz, fig.alt="A dual-line chart comparing two growth indices from 2020 to 2025, both normalized so 2020 equals 100. The pink line for AI Market Revenue rises steeply to roughly 379 by 2025. The dark pink line for Software Development Job Postings rises from 100 to a peak near 200 in 2022, then falls sharply back below 100 by 2024 and 2025. A light gray shaded rectangle marks the post-ChatGPT divergence period from 2022 to 2023. The chart title reads AI Market Growth vs Software Development Job Postings 2020 to 2025. Sources are Statista and Indeed Hiring Lab."}
+# Build indexed comparison dataset for Q1
+viz_data <- final_combined %>%
+  filter(!is.na(avg_software_index)) %>%
+  select(Year, AI_Market_Billions, avg_software_index) %>%
+  mutate(
+    AI_Market_Index = (AI_Market_Billions / first(AI_Market_Billions)) * 100,
+    Software_Jobs_Index = (avg_software_index / first(avg_software_index)) * 100
+  ) %>%
+  pivot_longer(
+    cols = c(AI_Market_Index, Software_Jobs_Index),
+    names_to = "Metric",
+    values_to = "Index_Value"
+  ) %>%
+  mutate(
+    Metric = recode(Metric,
+      "AI_Market_Index"     = "AI Market Revenue",
+      "Software_Jobs_Index" = "Software Dev Job Postings"
+    )
+  )
+
+p <- ggplot(viz_data, aes(x = Year, y = Index_Value, color = Metric)) +
+  geom_line(linewidth = 1.4) +
+  geom_point(size = 3) +
+  annotate("rect", xmin = 2022, xmax = 2023, ymin = -Inf, ymax = Inf,
+           alpha = 0.08, fill = "gray30") +
+  annotate("text", x = 2022.5, y = 260, label = "Post-ChatGPT\nperiod",
+           size = 3, color = "gray40", hjust = 0.5) +
+  scale_color_manual(values = c(
+    "AI Market Revenue"          = "hotpink",
+    "Software Dev Job Postings"  = "hotpink4"
+  )) +
+  scale_y_continuous(labels = comma) +
+  scale_x_continuous(breaks = 2020:2025) +
+  labs(
+    title = "AI Market Growth vs. Software Development Job Postings (2020–2025)",
+    subtitle = "Both metrics indexed to 2020 = 100 | Hover to explore values",
+    x = "Year",
+    y = "Index (2020 = 100)",
+    color = "",
+    caption = "Sources: Statista (AI market revenue) | Indeed Hiring Lab (software dev job postings, U.S.)"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title    = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(color = "gray50", size = 11),
+    legend.position = "bottom",
+    panel.grid.minor = element_blank()
+  )
+
+ggplotly(p, tooltip = c("x", "y", "color"))
+```
+
+## Row {height=30%}
+
+### Findings
+
+While AI market revenue grew approximately 279% relative to its 2020 baseline by 2025, software development job postings fell *below* their 2020 baseline by 2024–2025. This is a striking divergence: as the AI economy expanded rapidly, employer demand for software developers did not rise in tandem and in fact declined. The shaded region marks the period immediately following ChatGPT's launch in November 2022, where the two trends begin to move in opposite directions.
+
+This finding is consistent with Westby & Modestino (2025), who document a sharp drop in junior-level software developer postings beginning November 2022, suggesting AI may be substituting for routine coding tasks previously handled by entry-level hires rather than expanding the field overall.
+
+This visualization uses `mutate()` to create growth indices (dividing each year's value by the 2020 baseline and multiplying by 100), and `pivot_longer()` to reshape both metrics into a single column for plotting with `ggplot2`. Indexing is necessary here because the raw values — billions of dollars vs. an arbitrary job-posting index — cannot be compared on the same axis without normalization.
+
+### Summary Table
+
+```{r q1-table}
+viz_data %>%
+  pivot_wider(names_from = Metric, values_from = Index_Value) %>%
+  rename(
+    `AI Market Index` = `AI Market Revenue`,
+    `Software Jobs Index` = `Software Dev Job Postings`
+  ) %>%
+  kable(digits = 1, caption = "Indexed Values by Year (2020 = 100)")
+```
+
+---
+
+# Question 2 {data-icon="fa-robot"}
+
+## Row {height=15%}
+
+### Research Question
+
+**Is the share of software development job postings that mention AI skills growing proportionally with AI market expansion?**
+
+Using `avg_ai_share` from Indeed alongside `AI_Market_Billions` and `AI_Users_Millions` from Statista, we examine whether AI is gradually integrating into existing software developer roles or whether AI market growth is happening largely independent of changes in what those roles require. A proportional relationship would suggest AI is reshaping the job itself; a decoupled relationship would suggest economic growth is concentrated elsewhere (e.g., in infrastructure or enterprise licensing, not front-line developer roles).
+
+## Row {height=55%}
+
+### Visualization
+
+```{r q2-viz, fig.height=6, fig.alt="A line chart with three lines spanning 2020 to 2024, all indexed to 2020 equals 100. The pink line for AI Market Revenue rises sharply to about 350 by 2024. The medium pink line for AI Tool Users rises to about 300. The dark purple line for AI Share of Job Postings rises modestly, reaching only about 175 by 2024, far below the other two metrics. The chart demonstrates that AI skill demand in job postings is growing much more slowly than the AI market itself. Sources are Statista and Indeed Hiring Lab."}
+growth_long <- growth_indexed %>%
+  filter(!is.na(Software_Jobs_Index)) %>%
+  select(Year, AI_Market_Index, AI_Users_Index, AI_JobShare_Index) %>%
+  pivot_longer(
+    cols = -Year,
+    names_to = "Metric",
+    values_to = "Index_Value"
+  ) %>%
+  mutate(
+    Metric = case_when(
+      Metric == "AI_Market_Index"    ~ "AI Market Revenue",
+      Metric == "AI_Users_Index"     ~ "AI Tool Users",
+      Metric == "AI_JobShare_Index"  ~ "AI Share of Job Postings",
+      TRUE ~ Metric
+    )
+  )
+
+ggplot(growth_long, aes(x = Year, y = Index_Value, color = Metric)) +
+  geom_line(linewidth = 1.3) +
+  geom_point(size = 2.8) +
+  scale_color_manual(values = c(
+    "AI Market Revenue"         = "hotpink",
+    "AI Tool Users"             = "hotpink3",
+    "AI Share of Job Postings"  = "deeppink4"
+  )) +
+  scale_y_continuous(labels = comma) +
+  scale_x_continuous(breaks = 2020:2024) +
+  labs(
+    title = "AI Market Growth vs. AI Skill Demand in Job Postings (2020–2024)",
+    subtitle = "All metrics indexed to 2020 = 100",
+    x = "Year",
+    y = "Growth Index (2020 = 100)",
+    color = "",
+    caption = "Sources: Statista | Indeed Hiring Lab (U.S.)"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    legend.position = "bottom",
+    panel.grid.minor = element_blank()
+  )
+```
+
+## Row {height=30%}
+
+### Findings
+
+The visualization reveals that AI's share of job postings is growing, but at a substantially slower rate than either AI market revenue or AI tool user adoption. By 2024, AI market revenue had grown over 250% relative to its 2020 baseline, while the AI share of job postings had grown by a much more modest amount. This decoupling suggests that AI's economic expansion is not being fully reflected in formal skill requirements listed in job postings — at least not yet.
+
+One interpretation is that companies are integrating AI tools into existing workflows without explicitly advertising for them as skills, meaning actual AI usage on the job may be outpacing what job descriptions signal. Another interpretation is that the economic growth is concentrated in AI infrastructure, cloud services, or enterprise licensing — sectors that don't directly translate to "AI skills required" in a software developer job posting. Either way, the proportionality hypothesis does not hold: AI market growth and AI job-skill demand are not moving together.
+
+This gap may also reflect a lag effect. The U.S. Bureau of Labor Statistics (2025) projects software developer employment will grow 17.9% over 2023–2033 as companies need more workers to build and maintain AI systems — suggesting explicit skill requirements in postings may eventually catch up to the market over a longer time horizon than our data captures.
+
+### Year-over-Year AI Share Growth
+
+```{r q2-table}
+yoy_growth %>%
+  filter(!is.na(avg_ai_share)) %>%
+  select(Year, avg_ai_share, AI_Share_YoY, AI_Market_YoY) %>%
+  rename(
+    `AI Share of Jobs (%)` = avg_ai_share,
+    `AI Share YoY Growth (%)` = AI_Share_YoY,
+    `AI Market YoY Growth (%)` = AI_Market_YoY
+  ) %>%
+  kable(digits = 2, caption = "AI Share of Job Postings vs. AI Market Growth (YoY %)")
+```
+
+---
+
+# Question 3 {data-icon="fa-bolt"}
+
+## Row {height=15%}
+
+### Research Question
+
+**Did the post-ChatGPT period (2022–2023) produce a measurable disruption in software development hiring patterns?**
+
+The software job posting index dropped sharply in 2023 (from approximately 195.7 to 90.5) — precisely when AI market interest was surging post-ChatGPT. We investigate whether this decline reflects AI tools reducing demand for software developers, or whether it is better explained by broader macroeconomic factors: the 2022–2023 tech layoffs, rising interest rates, and post-pandemic correction. The `Growth_Phase` categorical variable and year-over-year growth rates in our wrangled dataset are central to answering this question.
+
+## Row {height=55%}
+
+### Visualization
+
+```{r q3-viz, fig.alt="A grouped bar chart with three bars per growth phase across three phases: Early Stage 2020 to 2021, Rapid Expansion 2022 to 2024, and Projected Maturity 2025 and beyond. Each group shows average values for AI Market Index in pink, Software Jobs Index in medium pink, and AI Share of Jobs percentage in dark purple. During Rapid Expansion, the AI Market Index bar rises to roughly 300 while the Software Jobs Index bar drops below 100, visually capturing the decoupling between AI market growth and software hiring. The title reads AI Growth Phase Comparison Market vs Labor Market Response. Sources are Statista and Indeed Hiring Lab."}
+phase_summary <- yoy_growth %>%
+  filter(!is.na(Software_Jobs_Index)) %>%
+  group_by(Growth_Phase) %>%
+  summarize(
+    Avg_AI_Market_Index    = mean(AI_Market_Index, na.rm = TRUE),
+    Avg_Software_Jobs_Index = mean(Software_Jobs_Index, na.rm = TRUE),
+    Avg_AI_Share           = mean(avg_ai_share, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  pivot_longer(
+    cols = -Growth_Phase,
+    names_to = "Metric",
+    values_to = "Value"
+  ) %>%
+  mutate(
+    Metric = recode(Metric,
+      "Avg_AI_Market_Index"     = "AI Market Index (2020=100)",
+      "Avg_Software_Jobs_Index" = "Software Jobs Index (2020=100)",
+      "Avg_AI_Share"            = "AI Share of Jobs (%)"
+    )
+  )
+
+ggplot(phase_summary, aes(x = Growth_Phase, y = Value, fill = Metric)) +
+  geom_col(position = "dodge", width = 0.65) +
+  scale_fill_manual(values = c(
+    "AI Market Index (2020=100)"     = "hotpink",
+    "Software Jobs Index (2020=100)" = "hotpink3",
+    "AI Share of Jobs (%)"           = "deeppink4"
+  )) +
+  labs(
+    title = "AI Growth Phase Comparison: Market vs. Labor Market Response",
+    subtitle = "Average values within each AI growth phase",
+    x = "Growth Phase",
+    y = "Average Value",
+    fill = "",
+    caption = "Sources: Statista | Indeed Hiring Lab (U.S.)"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title    = element_text(face = "bold", size = 14),
+    legend.position = "bottom",
+    axis.text.x = element_text(size = 10),
+    panel.grid.minor = element_blank()
+  )
+```
+
+## Row {height=30%}
+
+### Findings
+
+The grouped bar chart reveals a striking pattern: during the Rapid Expansion phase (2022–2024), AI market growth accelerated sharply while software job postings fell back toward — and then below — the 2020 baseline. This is the clearest evidence of disruption in the data. However, attributing this entirely to AI would be an overreach. The 2022–2023 period also saw the Federal Reserve's most aggressive interest rate hiking cycle in decades, widespread tech layoffs at major firms (Amazon, Google, Meta, Microsoft), and a broader post-pandemic correction in tech valuations.
+
+The most defensible interpretation is that the job posting decline is **multi-causal**: macroeconomic headwinds were the primary driver of the 2023 collapse, but AI-driven productivity gains may have contributed by allowing companies to sustain output with fewer new hires during the recovery. The AI share of job postings did *not* spike dramatically in 2023, which argues against a simple "AI replaced developers" narrative. Rather, the data suggests a more complex story where both economic cycles and AI adoption are reshaping the labor market simultaneously.
+
+This is consistent with Westby & Modestino (2025), who find the steepest declines concentrated among junior-level postings — suggesting AI may be substituting for routine entry-level tasks rather than eliminating software development as a profession entirely.
+
+This section uses `case_when()` to create the `Growth_Phase` categorical variable — this is our **intermediate tool (Conditional Transformation)**. Without this, we could not group years into meaningful analytical phases, and the phase-level bar chart comparison would not be possible.
+
+### Phase Statistics
+
+```{r q3-table}
+yoy_growth %>%
+  filter(!is.na(avg_software_index)) %>%
+  group_by(Growth_Phase) %>%
+  summarize(
+    `Years` = paste(Year, collapse = ", "),
+    `Avg AI Market ($B)` = mean(AI_Market_Billions, na.rm = TRUE),
+    `Avg Software Jobs Index` = mean(avg_software_index, na.rm = TRUE),
+    `Avg AI Share (%)` = mean(avg_ai_share, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  kable(digits = 2, caption = "Summary Statistics by Growth Phase")
+```
+
+---
+
+# Data Wrangling {data-icon="fa-wrench"}
+
+## Row {height=50%}
+
+### Wrangling Steps & Tool Usage
+
+This section documents the key data transformations performed across the analysis. All tools used must either directly help answer our research questions, check assumptions, or produce outputs that improve our conclusions.
+
+**Step 1 — Pivot Wider to Longer (`pivot_longer`):** The Statista datasets arrived in wide format, with years as column headers. We used `pivot_longer()` to convert each into a tidy long format with one row per year, which is necessary for joining on a `Year` key and for `ggplot2` plotting.
+
+**Step 2 — Date Conversion (`as.Date`, `lubridate::year`):** Indeed's `dateString` column was a character field. We used `as.Date()` to convert it to a proper Date object and then `lubridate::year()` to extract the year for annual aggregation. This is our **intermediate tool: Dates**. Without converting to Date format, we could not correctly extract year, calculate date-based gaps, or align the daily series with Statista's annual data.
+
+**Step 3 — Conditional Transformation (`case_when`):** We used `case_when()` to classify each year into one of three growth phases (Early Stage, Rapid Expansion, Projected Maturity). This is our **intermediate tool: Conditional Transformation**. An alternative would be manually filtering to each year range, but `case_when()` is far more readable and maintainable, and allows us to treat the phase as a factor variable for grouped analysis.
+
+**Step 4 — `summarize` and `mutate` for YoY rates:** We computed year-over-year percentage changes using `mutate()` with `lag()`, and aggregated daily data to annual averages using `group_by()` + `summarize()`. These are **basic tools** from the required list.
+
+**Step 5 — `filter` and `arrange`:** Used throughout to restrict data to the United States and Software Development sector (Indeed), and to ensure chronological ordering before applying `lag()`.
+
+**Step 6 — `left_join` and `inner_join`:** Joining the Statista and Indeed datasets on `Year` — left join to preserve future projection years from Statista with `NA` for Indeed columns.
+
+### Tools Not Covered in Class
+
+**`lubridate::year()`**
+This function extracts the four-digit year from a Date object as a numeric integer. It solves the problem of needing to group daily data by year before joining with Statista's annual data. We could not have achieved this cleanly with base R's `format()` alone, as that returns a string rather than a numeric type compatible with the Statista `Year` column. We learned to use it from the lubridate package documentation and the course's date handling reference materials.
+
+**`lag()` inside `mutate()`**
+The `lag()` function returns the previous row's value within a vector, making it ideal for computing year-over-year differences. Without `lag()`, we would have had to join the dataset to a shifted version of itself — a far more complex operation. We learned this from the dplyr documentation and R for Data Science (Hadley Wickham, Chapter 5).
+
+**`geom_smooth(method = "loess")`**
+Used in the appendix daily visualization, LOESS (locally estimated scatterplot smoothing) fits a flexible, non-parametric smooth curve to noisy time series data. It is more appropriate than a linear trend line here because the relationship between date and job postings is clearly non-linear. We could not produce this with tools covered in class and learned it from the ggplot2 documentation.
+
+## Row {height=50%}
+
+### Combined Dataset Preview
+
+```{r wrangling-preview}
+kable(
+  final_combined %>%
+    filter(!is.na(avg_software_index)) %>%
+    select(Year, AI_Market_Billions, AI_Users_Millions, Software_Total_Billions,
+           avg_software_index, avg_ai_share, observations),
+  digits = 2,
+  caption = "Final Combined Dataset (Years with Both Statista + Indeed Data)",
+  col.names = c("Year", "AI Market ($B)", "AI Users (M)", "Software Market ($B)",
+                "Avg SW Jobs Index", "Avg AI Share (%)", "Daily Observations")
+)
+```
+
+### Growth Phases Summary
+
+```{r wrangling-phases}
+kable(
+  yoy_growth %>%
+    filter(!is.na(Software_Jobs_Index)) %>%
+    select(Year, Growth_Phase, AI_Market_YoY, Software_Jobs_YoY, AI_Share_YoY),
+  digits = 1,
+  caption = "Year-over-Year Growth Rates (%) by Phase",
+  col.names = c("Year", "Growth Phase", "AI Market YoY %", "SW Jobs YoY %", "AI Share YoY %")
+)
+```
+
+---
+
+# Conclusion {data-icon="fa-flag-checkered"}
+
+## Row {height=60%}
+
+### Major Takeaways
+
+**Takeaway 1: AI economic growth and software developer hiring have decoupled sharply since 2022.**
+
+Our most striking finding is the divergence between AI market revenue (up ~279% from 2020 to 2025) and software development job postings (which fell below their 2020 baseline by 2024). AI market growth has *not* translated into proportional hiring demand for software developers. Rather than expanding the workforce, AI's economic gains appear to be concentrated in ways that do not require proportional increases in developer headcount — likely through productivity gains, infrastructure spending, and enterprise licensing that doesn't generate front-line dev jobs at scale. Westby & Modestino (2025) corroborate this pattern at a finer level, finding junior developer postings fell to roughly half their 2019 baseline by 2024.
+
+**Takeaway 2: AI skill requirements in job postings are growing, but far more slowly than the AI market itself.**
+
+AI's share of software job postings did increase across our study period, but not in proportion to the dramatic revenue and user growth in the AI market. AI market expansion and AI skill demand are not growing proportionally. One likely explanation is that many companies are adopting AI tools internally without explicitly listing them as required skills in job postings. The BLS (2025) projection of 17.9% developer employment growth over the coming decade suggests these skill requirements may eventually catch up — but our data captures a period where they clearly have not yet.
+
+**Takeaway 3: The 2022–2023 software hiring downturn is multi-causal and cannot be attributed to AI alone.**
+
+The sharpest drop in software job postings occurred in 2023, coinciding with ChatGPT's mainstream breakthrough, but also with one of the most severe tech-sector contractions in recent memory. The disruption is real, but disentangling AI's contribution from macroeconomic headwinds (interest rates, post-ZIRP tech corrections, mass layoffs) is not possible with this dataset alone. Our data is consistent with both a "macro-driven contraction" narrative and an "AI-boosted productivity requiring fewer hires" narrative.
+
+### Estimation Bias & Future Directions
+
+**Is our analysis over- or underestimating AI's labor market impact?**
+
+We believe our analysis likely *underestimates* AI's impact on the job market. The Indeed data captures only jobs explicitly mentioning AI in titles or descriptions, missing the many roles where AI tools are used daily without being listed as a formal skill requirement. Additionally, filtering to the "Software Development" sector excludes adjacent roles (e.g., ML engineers, AI researchers, data scientists, prompt engineers) where AI's impact on hiring is even more pronounced. The geographic restriction to the United States also misses global labor market dynamics.
+
+**Future Directions**
+
+The most valuable extension of this project would be incorporating salary data, which would allow us to test whether AI-adjacent skills command premium compensation even as total job *volume* declines. We would also benefit from demographic breakdowns to assess whether AI's labor market transformation is equitably distributed — a limitation Westby & Modestino (2025) also flag. Finally, expanding the sector scope beyond "Software Development" to include data science, AI research, product management, and operations roles would give a fuller picture of how AI is reshaping the knowledge economy broadly.
+
+## Row {height=40%}
+
+### Final Growth Comparison
+
+```{r conclusion-viz, fig.height=4, fig.alt="A four-line chart spanning 2020 to 2024, with all metrics indexed to 2020 equals 100. The light pink line for AI Market Revenue and the hot pink line for Total Software Market both rise steadily, reaching approximately 350 and 175 respectively by 2024. The medium pink line for Software Job Postings rises to a peak around 200 in 2022 then drops sharply below 100 by 2024. The dark purple line for AI Share of Jobs rises modestly to about 175. The chart title reads All Metrics Compared 2020 to 2024. Sources are Statista and Indeed Hiring Lab."}
+growth_long_all <- growth_indexed %>%
+  filter(!is.na(Software_Jobs_Index)) %>%
+  select(Year, AI_Market_Index, Software_Market_Index,
+         Software_Jobs_Index, AI_JobShare_Index) %>%
+  pivot_longer(cols = -Year, names_to = "Metric", values_to = "Index_Value") %>%
+  mutate(
+    Metric = case_when(
+      Metric == "AI_Market_Index"      ~ "AI Market Revenue",
+      Metric == "Software_Market_Index" ~ "Total Software Market",
+      Metric == "Software_Jobs_Index"   ~ "Software Job Postings",
+      Metric == "AI_JobShare_Index"     ~ "AI Share of Jobs",
+      TRUE ~ Metric
+    )
+  )
+
+ggplot(growth_long_all, aes(x = Year, y = Index_Value, color = Metric)) +
+  geom_line(linewidth = 1.2) +
+  geom_point(size = 2.5) +
+  scale_color_manual(values = c(
+    "AI Market Revenue"     = "lightpink",
+    "Total Software Market" = "hotpink",
+    "Software Job Postings" = "hotpink3",
+    "AI Share of Jobs"      = "deeppink4"
+  )) +
+  scale_y_continuous(labels = comma) +
+  scale_x_continuous(breaks = 2020:2024) +
+  labs(
+    title = "All Metrics Compared: 2020–2024",
+    subtitle = "Indexed to 2020 = 100",
+    x = "Year", y = "Growth Index (2020 = 100)", color = "",
+    caption = "Sources: Statista | Indeed Hiring Lab (U.S.)"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "bottom", panel.grid.minor = element_blank())
+```
+
+### Key Numbers
+
+```{r conclusion-table}
+growth_indexed %>%
+  filter(!is.na(avg_software_index)) %>%
+  select(Year, AI_Market_Index, AI_Users_Index,
+         Software_Market_Index, Software_Jobs_Index, AI_JobShare_Index) %>%
+  rename(
+    `AI Market` = AI_Market_Index,
+    `AI Users` = AI_Users_Index,
+    `SW Market` = Software_Market_Index,
+    `SW Jobs` = Software_Jobs_Index,
+    `AI Job Share` = AI_JobShare_Index
+  ) %>%
+  kable(digits = 1, caption = "All Growth Indices by Year (2020 = 100)")
+```
+
+---
+
+# References {data-icon="fa-book"}
+
+## Row {height=100%}
+
+### Outside Sources
+
+**Westby, C., & Modestino, A. S. (2025).** *The impact of generative AI on job opportunities for junior software developers.* Manuscript submitted for publication.
+https://aliciasassermodestino.com/wp-content/uploads/2025/06/Impact_of_GenAI_on_SWEs_061625.pdf
+
+Analyzes over 575,000 job vacancy records and finds that demand for junior software developers dropped sharply beginning November 2022, coinciding with ChatGPT's release. By 2024, software engineer postings had fallen to roughly half their 2019 baseline, with entry-level roles hit far harder than senior ones. Directly supports our Q1 and Q3 findings.
+
+---
+
+**U.S. Bureau of Labor Statistics. (2025).** *AI impacts in BLS employment projections.* The Economics Daily.
+https://www.bls.gov/opub/ted/2025/ai-impacts-in-bls-employment-projections.htm
+
+Projects software developer employment growing 17.9% over 2023–2033, well above the 4% national average, as companies build and maintain AI systems. Offers a longer-run counterpoint to our near-term finding of declining job postings, and is cited in our Q2 findings to contextualize the lag between market growth and explicit skill demand in postings.
+
+### Data Sources & Additional Resources
+
+**Data Sources**
+
+- Indeed Hiring Lab. (2025). *Job postings tracker* [Data repository]. GitHub. https://github.com/hiring-lab/job_postings_tracker
+- Statista Research Department. (2024). *Artificial intelligence market size worldwide 2021–2030.* https://www.statista.com/
+
+**Additional Resources Consulted**
+
+- ggplot2 Book (https://ggplot2-book.org/themes.html) — for custom color palettes and theme adjustments
+- Indeed Hiring Lab methodology (https://www.hiringlab.org/about/) — for understanding index baseline conventions
+- lubridate documentation — for `year()` function usage
+- R for Data Science (Hadley Wickham) — for `lag()` within `mutate()` patterns
+
+---
+
+# Group Information {data-icon="fa-users"}
+
+## Row {height=30%}
+
+### About This Project
+
+**Topic:** Analyzing the relationship between AI market growth and software development job market trends.
+
+This group is investigating how the growth of AI technologies is reshaping the software development job market. Specifically, we examine whether AI's economic expansion, measured by market revenue and user adoption, corresponds to changes in hiring demand and skill requirements in the software industry. Our analysis draws on market data from Statista and labor market data from Indeed Hiring Lab to explore this question empirically.
+
+**Group Section:** BG-5 | **Teaching Assistant:** Lexeigh Kolakowski
+
+## Row {height=40%}
+
+### Lauren Hughes
+
+**Lauren Hughes**
+
+Applied Math | University of Washington | lhughes@uw.edu
+
+Lauren is an Applied Mathematics major. She chose this topic due to interest in how actual market trends compare with what is portrayed in the news, as well as the mathematical modeling behind labor market indices & growth curves. Lauren enjoys applying various quantitative methods to economic questions (+ seeing how others work with data) & is pursuing a career in either Applied Mathematics/tech or Medicine, both of which emphasize the importance of accurate, readily conveyable information.
+
+### Jonah Calague
+
+**Jonah Calague**
+Informatics | University of Washington | jcalague@uw.edu
+
+Jonah is interested in seeing how the growth of AI is transforming the software industry and influencing the job market. His informatics background gives him a strong foundation in understanding how technology, data, and human behavior relate.
+
+### Oliver Boctor
+
+**Oliver Boctor**
+University of Washington
+
+Oliver is a member of the project team contributing to the analysis of AI market trends and their relationship to software development employment patterns.
+
+## Row {height=30%}
+
+### Coding Notes
+
+**Tools from Class Used in This Project**
+
+- `filter`, `select`, `mutate`, `group_by`, `summarize`, `arrange` — core dplyr verbs for data wrangling
+- `pivot_longer` — reshaping Statista wide-format data to long format
+- `inner_join`, `left_join` — combining Statista and Indeed datasets
+- `ggplot2` with `geom_line`, `geom_point`, `geom_col`, `geom_area`, `geom_smooth` — visualization
+- `knitr::kable` — producing formatted summary tables
+- `scales::comma` — human-readable number formatting on axis labels
+
+**Additional Resources Consulted**
+
+- ggplot2 Book (https://ggplot2-book.org/themes.html) — for custom color palettes and theme adjustments
+- Indeed Hiring Lab methodology (https://www.hiringlab.org/about/) — for understanding index baseline conventions
+- lubridate documentation — for `year()` function usage
+- R for Data Science (Hadley Wickham) — for `lag()` within `mutate()` patterns
+
+### Session Info
+
+```{r session-info}
+sessionInfo()
+```
